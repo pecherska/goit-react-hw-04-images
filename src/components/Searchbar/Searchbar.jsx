@@ -4,7 +4,8 @@ import { Formik } from 'formik';
 const Searchbar = ({ onSubmit }) => {
   const handleSubmit = (values, actions) => {
     console.log(values);
-    onSubmit(values.userSearch.trim());
+    onSubmit(values.userSearch);
+    console.log(values.userSearch);
     actions.resetForm();
   };
 

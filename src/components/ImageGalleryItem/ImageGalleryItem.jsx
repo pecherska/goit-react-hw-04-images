@@ -9,7 +9,6 @@ export const ImageGalleryItem = ({ image, onClick }) => {
           onClick={() => {
             onClick(image.id);
           }}
-          loadindg="lazy"
         />
       </ImageListItems>
     </>

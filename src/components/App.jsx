@@ -22,7 +22,7 @@ export const App = () => {
   const [contentModal, setContentModal] = useState('');
 
   useEffect(() => {
-    if (userSearch || page !== 1) {
+    if (userSearch !== '' || page !== 1) {
       const handelImages = async () => {
         try {
           setIsLoading(true);
@@ -57,8 +57,14 @@ export const App = () => {
     }
   }, [page, userSearch, perPage]);
 
-  const handelSubmit = userSearch => {
-    setUserSearch(userSearch);
+  const handelSubmit = newUserSearch => {
+    if (newUserSearch === '') {
+      toast.error('Input your data');
+      return;
+    }
+
+    setUserSearch(newUserSearch);
+    setImages([]);
     setPage(1);
   };
 

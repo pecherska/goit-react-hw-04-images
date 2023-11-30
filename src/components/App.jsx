@@ -1,4 +1,4 @@
-import { Component } from 'react';
+import { useState, useEffect } from 'react';
 import { ToastContainer, toast } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
 import Searchbar from './Searchbar/Searchbar';
@@ -9,123 +9,94 @@ import Loader from './Loader/Loader';
 import Button from './Button/Button';
 import { ImgModal, LoderContainer } from './App.styled';
 
-export class App extends Component {
-  state = {
-    userSearch: '',
-    images: '',
-    error: '',
-    page: 1,
-    perPage: '12',
-    isLoading: false,
-    showModal: false,
-    showLoadMore: false,
-    modalImage: '',
-    contentModal: '',
-  };
+export const App = () => {
+  const [userSearch, setUserSearch] = useState('');
+  const [images, setImages] = useState([]);
+  const [error, setError] = useState('');
+  const [page, setPage] = useState(1);
+  const [perPage] = useState('12');
+  const [isLoading, setIsLoading] = useState(false);
+  const [showModal, setShowModal] = useState(false);
+  const [showLoadMore, setShowLoadMore] = useState(false);
+  const [modalImage, setModalImage] = useState('');
+  const [contentModal, setContentModal] = useState('');
 
-  componentDidUpdate(prevProps, prevState) {
-    if (
-      prevState.userSearch !== this.state.userSearch ||
-      this.state.page !== prevState.page
-    ) {
-      if (prevState.userSearch !== this.state.userSearch) {
-        this.setState({ images: '' });
-      }
-      this.handelImages();
-    }
-  }
+  useEffect(() => {
+    if (userSearch || page !== 1) {
+      const handelImages = async () => {
+        try {
+          setIsLoading(true);
+          console.log(userSearch);
+          const data = await getImages(userSearch, page, perPage);
+          console.log(data);
+          const totalPage = Math.ceil(data.totalHits / perPage);
 
-  handelImages = async () => {
-    try {
-      this.setState({ isLoading: true });
+          setImages(prevState => [...prevState, ...data.hits]);
+          setIsLoading(false);
+          setError('');
 
-      const data = await getImages(
-        this.state.userSearch,
-        this.state.page,
-        this.state.perPage
-      );
+          if (!data.totalHits) {
+            toast.warn('Nothing found! Try again, please.');
+            return;
+          }
 
-      const totalPage = Math.ceil(data.totalHits / this.state.perPage);
+          if (data.totalHits) {
+            toast.success(`Hooray! We found ${data.totalHits} images.`);
+            setShowLoadMore(true);
+          }
 
-      this.setState(prevState => ({
-        images: [...prevState.images, ...data.hits],
-        isLoading: false,
-        error: '',
-      }));
-
-      if (!data.totalHits) {
-        toast.warn('Nothing found! Try again, please.');
-        return;
-      }
-      if (data.totalHits) {
-        toast.success(`Hooray! We found ${data.totalHits} images.`);
-        this.setState({ showLoadMore: true });
-      }
-      if (this.state.page === totalPage) {
-        this.setState({ showLoadMore: false });
-      }
-    } catch (error) {
-      this.setState({
-        error: error.response.data,
-        isLoading: false,
-      });
-    }
-  };
-
-  handelSubmit = userSearch => {
-    this.setState({ userSearch, page: 1 });
-  };
-
-  handleClick = () => {
-    this.setState(prevState => {
-      return {
-        page: prevState.page + 1,
+          if (page === totalPage) {
+            setShowLoadMore(false);
+          }
+        } catch (error) {
+          setError(error.response.data);
+          setIsLoading(false);
+        }
       };
-    });
+      handelImages();
+    }
+  }, [page, userSearch, perPage]);
+
+  const handelSubmit = userSearch => {
+    setUserSearch(userSearch);
+    setPage(1);
   };
 
-  openModal = contentModal => {
-    this.setState({
-      showModal: true,
-      contentModal,
-    });
-
-    const searchImage = this.state.images.find(
-      image => image.id === contentModal
-    );
-    console.log(searchImage);
-    this.setState({ modalImage: searchImage.largeImageURL });
+  const handleClick = () => {
+    setPage(prevPage => prevPage + 1);
   };
 
-  closeModal = () => {
-    this.setState({
-      showModal: false,
-      contentModal: '',
-    });
+  const openModal = contentModal => {
+    setShowModal(true);
+    setContentModal(contentModal);
+
+    const searchImage = images.find(image => image.id === contentModal);
+    setModalImage(searchImage.largeImageURL);
   };
 
-  render() {
-    return (
-      <div>
-        <ToastContainer />
-        {this.state.error && toast.error(this.state.error)}
+  const closeModal = () => {
+    setShowModal(false);
+    setContentModal('');
+  };
 
-        <Searchbar onSubmit={this.handelSubmit}></Searchbar>
+  return (
+    <div>
+      <ToastContainer />
+      {error && toast.error(error)}
 
-        {this.state.images && (
-          <ImageGallery images={this.state.images} onClick={this.openModal} />
-        )}
-        <LoderContainer>{this.state.isLoading && <Loader />}</LoderContainer>
-        {this.state.showLoadMore && (
-          <Button handleClick={this.handleClick}></Button>
-        )}
+      <Searchbar onSubmit={handelSubmit}></Searchbar>
 
-        {this.state.showModal && (
-          <Modal onClose={this.closeModal} content={this.state.contentModal}>
-            <ImgModal src={this.state.modalImage} alt="" />
-          </Modal>
-        )}
-      </div>
-    );
-  }
-}
+      {images.length > 0 && (
+        <ImageGallery images={images} onClick={openModal} />
+      )}
+      <LoderContainer>{isLoading && <Loader />}</LoderContainer>
+      {showLoadMore && <Button handleClick={handleClick}></Button>}
+
+      {showModal && (
+        <Modal onClose={closeModal} content={contentModal}>
+          <ImgModal src={modalImage} alt="" />
+        </Modal>
+      )}
+    </div>
+  );
+};
